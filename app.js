@@ -75,5 +75,18 @@ app.get('/check',(req,res)=>{
       res.status(200).json(user.name)}
  catch{res.status(403).json()}
   })
+exports.server=require('http').createServer(app)
+let ws=require('./wss')
 
-app.listen(3000,()=>{console.log("connected")})
+
+
+app.use( express.static(__dirname+'/dist/angular-test'))
+app.get('/*',(req,res)=>{res.sendFile('index.html',{root:'./dist/angular-test/'})})
+
+
+this.server.listen(3000,()=>{console.log("connected")})
+
+
+
+
+
