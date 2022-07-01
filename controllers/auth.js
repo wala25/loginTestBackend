@@ -1,6 +1,7 @@
 const bcrypt=require('bcrypt');
 const jwt=require('jsonwebtoken');
 const User=require('../schemas/user').User
+const Session=require('../schemas/session').Session
 
 let key='532B9FA5EED2729771BBD1BFCD94F'
 
@@ -33,8 +34,14 @@ exports.login=(req,res)=>{
            .then((usr)=>{if(usr)
              {bcrypt.compare(user.password , usr.password)
                   .then((rslt)=>{if(rslt)   
-                        {let token=jwt.sign({id:usr._id,name:usr.name}, key ,{algorithm:'HS256', expiresIn:'30d'});
-                        res.status(200).cookie('usr',token,{maxAge:30*24*60*60*1000,httpOnly:true}).json(usr.name)}
+                        {let session=new Session({userId:usr._id})
+                        session.save()
+                              .then((r)=>{
+                                let token=jwt.sign({id:usr._id,name:usr.name}, key ,{algorithm:'HS256', expiresIn:'30d'});
+                                res.status(200).cookie('session',r._id,{maxAge:30*24*60*60*1000,httpOnly:true})
+                                .cookie('usr',token,{maxAge:30*24*60*60*1000,httpOnly:true}).json(usr.name)
+                              })
+                        }
                         else {res.status(403).json('*Mdp incorrect !')}
                        }) 
                   .catch((e)=>{res.status(500).json('*Unknown error !')})
