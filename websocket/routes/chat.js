@@ -4,32 +4,22 @@ let WebSocket=require('ws');
 let wss=new WebSocket.Server({noServer:true, perMessageDeflate: false})
 
 //use new Map() instead new Array  // use session ID for socket client 
-//connections.set('ClientId',new Array().fill(new Map().set('sessionId',new ARray().fill('ws'))))
+//connections.set('ClientId',new Map().set('sessionId',new ARray().fill('ws')))
 let Clients=new Map()
 
 wss.on('connection',(ws,socket,info)=>{
-  console.log(socket[0])
-    let Client=Clients.get(info.user.id)||new Array()
-    if(Client.length>0){
-      let session=[]
-      for (let i=0;i<Client.length;i++){
-        session=Client[i].get(info.cookies.session)
+    let Client=Clients.get(info.user.id)||new Map()
+    
+      let session=Client.get(info.cookies.session)||new Array()
         if(session.length>0){
           session.push(socket)
-          Client[i].set(info.cookies.session,session)
-          Clients.set(info.user.id,Client)
-          break
-         }
-        else if(i===Client.leght-1){
-          Client.push(new Map().set(info.cookies.session,[socket]))
+          Client.set(info.cookies.session,session)
           Clients.set(info.user.id,Client)
         }
-      }
-    }
-    else{
-          Client.push(new Map().set(info.cookies.session,[socket]))
+        else{
+          Client.set(info.cookies.session,[socket])
           Clients.set(info.user.id,Client)
-    }
+        }
     console.log(Clients)
      ws.send(JSON.stringify({message:'connected'}))
        ws.on('message',(m)=>{
@@ -41,10 +31,37 @@ wss.on('connection',(ws,socket,info)=>{
               
      })
      ws.on('close',(w)=>{
-        let sockets=Clients.get(info.user.id).map(e=>{let s=e.get(info.cookies.session); if(s.length>0) return s })
-        
-        sockets.map((e)=>{e[0].destroy()})
+        let sessions=Clients.get(info.user.id)||new Map()
+        let sockets=sessions.get(info.cookies.session)||new Array()
+        if(sockets.length>1){
+           sockets.splice(sockets.indexOf(socket),1)
+           sessions.set(info.cookies.session,sockets)
+           Clients.set(info.user.id,sessions)
+        }
+        else{
+          if(sessions.size>1){
+            sessions.delete(info.cookies.session)
+            Clients.set(info.user.id,sessions)
+          }
+          else{
+            Clients.delete(info.user.id)
+          }
+        }
+        console.log(Clients)
      })
+     
  })
+//checking socket connections
+ const interval = setInterval(()=> {
+  wss.clients.forEach((ws)=> {
+    ws.ping('hhh');
+    if (ws.readyState!==1 ){
+      console.log('down')
+      return ws.close()
+    };
+      
+    
+  });
+}, 3000);
 
  module.exports=wss
